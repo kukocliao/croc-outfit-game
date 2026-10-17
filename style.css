@@ -9,8 +9,9 @@ button { font: inherit; cursor: pointer; }
 
 /* 數字卡：2×2 四色格，跟實體卡一樣 */
 .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.ncard { aspect-ratio: 1; display: grid; grid-template-columns: 1fr 1fr; border: 3px solid transparent; border-radius: 10px; overflow: hidden; padding: 0; }
-.ncard span { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: clamp(.7rem, 2.6vmin, 1.4rem); }
+.ncard { container-type: inline-size; aspect-ratio: 1; display: grid; grid-template-columns: 1fr 1fr; border: 3px solid transparent; border-radius: 10px; overflow: hidden; padding: 0; }
+.ncard span { display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: clamp(.7rem, 2.6vmin, 1.4rem); font-size: 28cqi; letter-spacing: -.03em; }
+/* 字級跟著卡片寬度走（cqi = 卡片寬的 1%）：28cqi 讓「100」剛好塞得進半張卡，手機上也不會縮成小字 */
 .ncard span:nth-child(1) { background: #3d9a4a; }
 .ncard span:nth-child(2) { background: #e0a526; }
 .ncard span:nth-child(3) { background: #2c5c9c; }
@@ -28,7 +29,7 @@ button { font: inherit; cursor: pointer; }
 /* 大字盤面：3×3、一張一個數字，給長者或年紀小的孩子 */
 .board.big { grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .board.big .ncard { grid-template-columns: 1fr; border-width: 4px; border-radius: 16px; }
-.board.big .ncard span { font-size: clamp(2rem, 9vmin, 5.5rem); }
+.board.big .ncard span { font-size: clamp(2rem, 9vmin, 5.5rem); font-size: 48cqi; }
 .board.big .ncard:nth-child(4n+2) span { background: #e0a526; }
 .board.big .ncard:nth-child(4n+3) span { background: #2c5c9c; }
 .board.big .ncard:nth-child(4n+4) span { background: #c2357a; }
