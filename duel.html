@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>穿搭數一數 雙人對戰</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 <style>
   html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
   body { display: grid; grid-template-rows: 1fr auto 1fr; }
@@ -34,38 +34,40 @@
 
 <div class="menu" id="menu">
   <h1>🐱🐊 穿搭數一數 雙人對戰</h1>
-  <select id="charSel" style="font-size:1.1rem;padding:10px;border-radius:12px"><option value="cat">🐱 摺耳貓</option><option value="croc">🐊 鱷魚</option></select>
   <p id="result"></p>
-  <p>平板平放，兩人面對面各顧一邊</p>
-  <button class="btn" onclick="start('mul')">開始：乘法</button>
-  <button class="btn alt" onclick="start('add')">開始：加法（簡單）</button>
+  <p>平板平放，兩人面對面各顧一邊；先點到答案的人得 1 分</p>
+  <div id="setup"></div>
+  <button class="btn" onclick="start()">開始</button>
 </div>
 
-<script src="game.js?v=3"></script>
+<script src="game.js?v=4"></script>
 <script>
 // 純本機模式，不連 Firebase；先答對的人得 1 分，答錯這題鎖住
-const SECS = 20, TOTAL = 10, REVEAL_MS = 3000;
+const TOTAL = 10, REVEAL_MS = 3000;
 const $ = (id) => document.getElementById(id);
-let mode, char, board, round, score, lock, picks, winner, phase = 'menu', endsAt;
+const draft = loadSettings();
+let set, gameBoard, round, score, lock, picks, winner, phase = 'menu', endsAt;
+$('setup').innerHTML = settingsHTML(draft, ['ranked']);   // 對戰固定「先答對得 1 分」，不用選計分
+bindSettings($('setup'), draft);
 
-function start(m) {
-  mode = m; char = $('charSel').value; board = makeBoard(); score = [0, 0]; round = null;
+function start() {
+  set = { ...draft }; gameBoard = makeBoard(); score = [0, 0]; round = null;
   $('menu').classList.add('hidden');
   next();
 }
 
 function next() {
-  round = makeRound((round?.n || 0) + 1, round?.mult, Math.random, char);
+  round = makeRound((round?.n || 0) + 1, round?.mult, Math.random, set.char, set);
   lock = [false, false]; picks = [null, null]; winner = null;
   phase = 'answer';
-  endsAt = Date.now() + SECS * 1000;
+  endsAt = set.secs ? Date.now() + set.secs * 1000 : Infinity;
   render();
 }
 
 function tap(p, i) {
   if (phase !== 'answer' || lock[p]) return;
   picks[p] = i;
-  if (board[i].includes(answerOf(round, mode))) { score[p]++; winner = p; return reveal(); }
+  if (boardOf(round, gameBoard)[i].includes(answerOf(round))) { score[p]++; winner = p; return reveal(); }
   lock[p] = true;
   if (lock[0] && lock[1]) return reveal();
   render();
@@ -83,12 +85,12 @@ function reveal() {
 }
 
 function half(p) {
-  const op = mode === 'add' ? '+' : '×';
-  const ans = answerOf(round, mode);
+  const ans = answerOf(round), board = boardOf(round, gameBoard);
   let msg = lock[p] ? '答錯了，等下一題' : `第 ${round.n} 題`;
-  if (phase === 'reveal') msg = winner === p ? '你最快！+1' : `${round.items.length} ${op} ${round.mult} = ${ans}`;
-  $('h' + p).innerHTML = `<div class="side"><div class="croc">${charSVG(round.items, round.char)}</div><div class="mcard">${op}${round.mult}</div><div class="msg">${msg}</div></div>
-    <div class="board">${boardHTML(board)}</div>`;
+  if (phase === 'reveal') msg = winner === p ? '你最快！+1' : equationText(round);
+  const mcard = round.op === 'count' ? '' : `<div class="mcard">${OP_SIGN[round.op]}${round.mult}</div>`;
+  $('h' + p).innerHTML = `<div class="side"><div class="croc">${charSVG(round.items, round.char)}</div>${mcard}<div class="msg">${msg}</div></div>
+    ${boardHTML(board)}`;
   $('h' + p).querySelectorAll('.ncard').forEach((b) => {
     const i = +b.dataset.card;
     if (picks[p] === i) b.classList.add(phase === 'reveal' && winner === p ? 'right' : 'wrong');
@@ -107,7 +109,7 @@ function render() {
 (function tick() {
   if (phase === 'answer') {
     const left = endsAt - Date.now();
-    $('timer').textContent = Math.max(0, Math.ceil(left / 1000));
+    $('timer').textContent = set.secs ? Math.max(0, Math.ceil(left / 1000)) : '';
     if (left <= 0) reveal();
   } else $('timer').textContent = '';
   requestAnimationFrame(tick);

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>穿搭數一數 團體模式</title>
+<link rel="stylesheet" href="style.css?v=2">
+<style>
+  html, body { height: 100%; }
+  body { display: grid; grid-template-rows: auto 1fr auto; }
+  .top { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; font-size: 1.4rem; font-weight: 800; }
+  .top .timer { font-size: 2.4rem; }
+  main { display: flex; align-items: center; justify-content: center; gap: 3vw; padding: 0 2vw; min-height: 0; }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 1vh; height: 100%; justify-content: center; }
+  .stage .croc { height: 52vh; aspect-ratio: .8; }
+  .stage .row { display: flex; align-items: center; gap: 16px; font-size: 7vh; font-weight: 900; }
+  .stage .mcard { height: 14vh; font-size: 9vh; }
+  .prompt { font-size: 4vh; font-weight: 800; text-align: center; min-height: 3em; }
+  main .board { height: 78vh; aspect-ratio: 1; max-width: 55vw; }
+  .bottom { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 12px; flex-wrap: wrap; background: #fff; }
+  .team { color: #fff; border: 0; border-radius: 14px; padding: 10px 22px; font-size: 1.4rem; font-weight: 800; }
+  .team b { font-size: 1.8rem; margin-left: 8px; }
+  .ask { font-size: 1.3rem; font-weight: 800; }
+  .menu { position: fixed; inset: 0; background: #f4f1e8f2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-size: 1.2rem; padding: 16px; text-align: center; }
+  .menu h2 { font-size: 2.4rem; margin: 0; }
+  @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  .ncard.wrong { animation: shake .3s; }
+</style>
+</head>
+<body>
+<div class="top"><span id="info"></span><span class="timer" id="timer"></span><button class="btn alt" onclick="openMenu()">重新設定</button></div>
+<main id="main"></main>
+<div class="bottom" id="bottom"></div>
+
+<div class="menu" id="menu">
+  <h1>🐱🐊 穿搭數一數 團體模式</h1>
+  <p id="result"></p>
+  <p>投影出題，大家用喊的或舉手回答；帶領者在電腦上點大家說的那張卡</p>
+  <div id="setup"></div>
+  <label>玩法 <select id="teamSel" style="font-size:1rem;padding:8px;border-radius:10px">
+    <option value="0">全場合作（一起累積答對題數）</option>
+    <option value="2">分 2 隊搶答</option>
+    <option value="3">分 3 隊搶答</option>
+    <option value="4">分 4 隊搶答</option>
+  </select></label>
+  <button class="btn" onclick="start()">開始</button>
+</div>
+
+<script src="game.js?v=4"></script>
+<script>
+// 純本機模式，不連 Firebase：一台電腦＋投影，帶領者操作
+const TOTAL = 10;
+const TEAMS = [['紅隊', '#d9534f'], ['藍隊', '#2c5c9c'], ['綠隊', '#3a8f3a'], ['黃隊', '#e0a526']];
+const $ = (id) => document.getElementById(id);
+const draft = loadSettings();
+let set, teams, gameBoard, round, phase = 'menu', endsAt, wrongs, teamScore, coopRight;
+$('setup').innerHTML = settingsHTML(draft, ['ranked']);   // 團體模式計分另外選（合作／分隊）
+bindSettings($('setup'), draft);
+
+function start() {
+  set = { ...draft }; teams = +$('teamSel').value;
+  gameBoard = makeBoard(); round = null; teamScore = [0, 0, 0, 0]; coopRight = 0;
+  $('menu').classList.add('hidden');
+  next();
+}
+
+function next() {
+  if (round && round.n >= TOTAL) return finish();
+  round = makeRound((round?.n || 0) + 1, round?.mult, Math.random, set.char, set);
+  wrongs = new Set();
+  phase = 'answer';
+  endsAt = set.secs ? Date.now() + set.secs * 1000 : Infinity;
+  render();
+}
+
+// 帶領者點了大家說的那張卡
+function tap(i) {
+  if (phase !== 'answer') return;
+  if (boardOf(round, gameBoard)[i].includes(answerOf(round))) {
+    if (teams) phase = 'award';             // 分隊：再按是哪一隊答對
+    else { coopRight++; phase = 'reveal'; }
+  } else wrongs.add(i);                      // 答錯不扣分，可以再猜
+  render();
+}
+
+function award(t) {
+  if (t >= 0) teamScore[t]++;
+  phase = 'reveal';
+  render();
+}
+
+function giveUp() { phase = 'reveal'; render(); }
+
+function finish() {
+  phase = 'menu';
+  if (teams) {
+    const list = TEAMS.slice(0, teams).map(([name], t) => [name, teamScore[t]]).sort((a, b) => b[1] - a[1]);
+    const tie = list[0][1] === list[1][1];
+    $('result').innerHTML = `<h2>${tie ? '🤝 平手！' : `🏆 ${list[0][0]}贏了！`}</h2>${list.map(([n, sc]) => `${n} ${sc} 分`).join('　')}`;
+  } else {
+    $('result').innerHTML = `<h2>🎉 全場答對 ${coopRight} / ${TOTAL} 題</h2>`;
+  }
+  $('menu').classList.remove('hidden');
+}
+
+function openMenu() {
+  $('result').textContent = '';
+  phase = 'menu';
+  $('menu').classList.remove('hidden');
+}
+
+function render() {
+  const board = boardOf(round, gameBoard), ans = answerOf(round), shown = phase !== 'answer';
+  const mcard = round.op === 'count' ? '' : `${OP_SIGN[round.op]}<div class="mcard">${round.mult}</div>`;
+  const prompt = phase === 'answer' ? promptText(round) : equationText(round);
+  $('info').textContent = `第 ${round.n} / ${TOTAL} 題`;
+  $('main').innerHTML = `<div class="stage"><div class="row"><div class="croc">${charSVG(round.items, round.char)}</div>${mcard}</div><div class="prompt">${prompt}</div></div>${boardHTML(board)}`;
+  $('main').querySelectorAll('.ncard').forEach((b) => {
+    const i = +b.dataset.card;
+    if (wrongs.has(i)) b.classList.add('wrong');
+    if (shown && board[i].includes(ans)) b.classList.add('right');
+    b.disabled = phase !== 'answer';
+    b.onclick = () => tap(i);
+  });
+
+  const scores = teams
+    ? TEAMS.slice(0, teams).map(([name, color], t) => `<button class="team" style="background:${color}" ${phase === 'award' ? `onclick="award(${t})"` : 'disabled'}>${name}<b>${teamScore[t]}</b></button>`).join('')
+    : `<span class="ask">全場答對 ${coopRight} 題</span>`;
+  let action = '';
+  if (phase === 'answer') action = `<button class="btn alt" onclick="giveUp()">公布答案</button>`;
+  if (phase === 'award') action = `<span class="ask">答對了！哪一隊答的？</span><button class="btn alt" onclick="award(-1)">不給分</button>`;
+  if (phase === 'reveal') action = `<button class="btn" onclick="next()">${round.n >= TOTAL ? '看結果' : '下一題'}</button>`;
+  $('bottom').innerHTML = scores + action;
+}
+
+// 倒數用時間戳算剩餘，時間到直接公布、不給分
+setInterval(() => {
+  if (phase === 'answer' && set.secs) {
+    const left = endsAt - Date.now();
+    $('timer').textContent = Math.max(0, Math.ceil(left / 1000));
+    if (left <= 0) giveUp();
+  } else $('timer').textContent = '';
+}, 250);
+</script>
+</body>
+</html>

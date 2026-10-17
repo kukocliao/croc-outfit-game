@@ -24,3 +24,17 @@ button { font: inherit; cursor: pointer; }
 .mcard { display: inline-flex; align-items: center; justify-content: center; background: #3a8f3a; color: #fff; font-weight: 900; border-radius: 14px; aspect-ratio: 1; }
 .croc svg { width: 100%; height: 100%; }
 .timer { font-variant-numeric: tabular-nums; font-weight: 800; }
+
+/* 大字盤面：3×3、一張一個數字，給長者或年紀小的孩子 */
+.board.big { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.board.big .ncard { grid-template-columns: 1fr; border-width: 4px; border-radius: 16px; }
+.board.big .ncard span { font-size: clamp(2rem, 9vmin, 5.5rem); }
+.board.big .ncard:nth-child(4n+2) span { background: #e0a526; }
+.board.big .ncard:nth-child(4n+3) span { background: #2c5c9c; }
+.board.big .ncard:nth-child(4n+4) span { background: #c2357a; }
+
+/* 難度設定表單 */
+.settings { display: flex; flex-direction: column; gap: 10px; align-items: center; background: #fff; padding: 14px; border-radius: 14px; }
+.settings .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.settings select { font-size: 1rem; padding: 8px; border-radius: 10px; }
+.settings .btn { padding: 8px 16px; font-size: 1rem; }

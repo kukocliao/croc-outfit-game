@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>穿搭數一數 主控端</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 <style>
   body { display: flex; min-height: 100vh; }
   main { flex: 1; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
@@ -37,13 +37,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=1"></script>
 <script src="sync.js?v=1"></script>
-<script src="game.js?v=3"></script>
+<script src="game.js?v=4"></script>
 <script>
-const SECS = 20, TOTAL = 10;
+const TOTAL = 10;
+const UNTIMED_MS = 6 * 3600 * 1000;   // 不計時：規則仍要 endsAt，給一個用不完的長度
 const GRACE_MS = 800;   // 時間到後多等一下，讓剛好在最後一刻送出的答案落地
 const $ = (id) => document.getElementById(id);
 const playerUrl = location.href.replace(/host\.html.*$/, 'player.html');
-let pickedChar = null;
+const draft = loadSettings();   // 開局前在表單上調的設定
 let S = { phase: 'lobby' }, players = {}, scores = {}, answers = {}, ansRef = null, finishing = false;
 
 signIn()
@@ -53,7 +54,7 @@ signIn()
       $('err').textContent = '這個房間已經綁定另一台主控裝置。要換裝置，請到 Firebase 後台刪掉 rooms/' + ROOM + '/hostUid。';
       return;
     }
-    room.child('state').on('value', (s) => { S = s.val() || { phase: 'lobby' }; watchAnswers(); render(); });
+    room.child('state').on('value', (s) => { S = s.val() || { phase: 'lobby' }; S.set = S.set || { ...DEFAULT_SETTINGS }; watchAnswers(); render(); });
     room.child('players').on('value', (s) => { players = s.val() || {}; render(); });
     room.child('scores').on('value', (s) => { scores = s.val() || {}; render(); });
     setInterval(tick, 250);   // 不用 rAF：分頁在背景時 rAF 會暫停，時間到也不會公布
@@ -74,16 +75,15 @@ function watchAnswers() {
   }
 }
 
-function newGame(mode) {
-  const char = document.getElementById('charSel').value;
-  room.update({ answers: null, scores: null, state: { phase: 'lobby', mode, char, board: makeBoard(), total: TOTAL } });
+function newGame() {
+  room.update({ answers: null, scores: null, state: { phase: 'lobby', set: { ...draft }, board: makeBoard(), total: TOTAL } });
 }
 
 function startRound() {
   const n = (S.round?.n || 0) + 1;
-  const r = makeRound(n, S.round?.mult, Math.random, S.char || 'croc');
+  const r = makeRound(n, S.round?.mult, Math.random, S.set.char, S.set);
   r.k = String(n);   // 字串題號，規則用它比對 answers/$round
-  r.endsAt = serverNow() + SECS * 1000;
+  r.endsAt = serverNow() + (S.set.secs ? S.set.secs * 1000 : UNTIMED_MS);
   room.update({ answers: null, 'state/phase': 'answer', 'state/round': r, 'state/reveal': null });
 }
 
@@ -91,11 +91,11 @@ function startRound() {
 function finishRound() {
   if (S.phase !== 'answer' || S.scoredRound === S.round.n || finishing) return;
   finishing = true;
-  const n = S.round.n, answer = answerOf(S.round, S.mode), card = findCard(S.board, answer);
+  const n = S.round.n, answer = answerOf(S.round), card = findCard(boardOf(S.round, S.board), answer);
   // 分數也重讀一次，避免主控端剛重整、本地 scores 還沒載入就覆蓋掉累計分
   Promise.all([room.child('answers/' + n).once('value'), room.child('scores').once('value')]).then(([snap, sc]) => {
     const scores = sc.val() || {};
-    const pts = scoreAnswers(snap.val(), card);
+    const pts = scoreAnswers(snap.val(), card, S.set.ranked);
     const upd = { 'state/phase': 'reveal', 'state/scoredRound': n, 'state/reveal': { answer, card, pts } };
     for (const [u, p] of Object.entries(pts)) {
       const cur = scores[u] || {};
@@ -108,7 +108,7 @@ function finishRound() {
 }
 
 function tick() {
-  if (S.phase === 'answer') {
+  if (S.phase === 'answer' && S.set.secs) {
     const left = S.round.endsAt - serverNow();
     const t = $('timer');
     if (t) t.textContent = Math.max(0, Math.ceil(left / 1000));
@@ -122,34 +122,35 @@ function render() {
   const ranked = Object.keys(players).sort((a, b) => (scores[b]?.score || 0) - (scores[a]?.score || 0));
   $('rank').innerHTML = ranked.map((u) => `<li>${nameOf(u)}　<b>${scores[u]?.score || 0}</b></li>`).join('');
 
-  const op = S.mode === 'add' ? '+' : '×';
-  const stage = S.round ? `<div class="stage"><div class="croc">${charSVG(S.round.items, S.round.char)}</div>${op}<div class="mcard">${S.round.mult}</div></div>` : '';
-  const modeBtns = `<div class="row"><select id="charSel" style="font-size:1.1rem;padding:10px;border-radius:12px"><option value="cat">🐱 摺耳貓</option><option value="croc">🐊 鱷魚</option></select><button class="btn" onclick="newGame('mul')">新遊戲：乘法</button><button class="btn alt" onclick="newGame('add')">新遊戲：加法（簡單）</button></div>`;
+  const r = S.round;
+  const stage = r ? `<div class="stage"><div class="croc">${charSVG(r.items, r.char)}</div>${r.op === 'count' ? '' : `${OP_SIGN[r.op]}<div class="mcard">${r.mult}</div>`}</div>` : '';
+  const setup = `${settingsHTML(draft)}<p class="center"><button class="btn" onclick="newGame()">套用設定、準備新遊戲</button></p>`;
   let html = '';
 
   if (S.phase === 'lobby') {
+    const ready = S.board && S.set
+      ? `<p class="center"><button class="btn" onclick="startRound()">開始第 1 題（${CHARS[S.set.char].name}・${SETTING_FIELDS[1][2].find(([v]) => v === S.set.op)[1]}）</button></p>` : '';
     html = `<p class="center">手機打開這個網址加入：</p><p class="url center">${escapeHtml(playerUrl)}</p>
-      <p class="center">已加入 ${Object.keys(players).length} 人</p>${modeBtns}
-      ${S.board ? `<p class="center"><button class="btn" onclick="startRound()">開始第 1 題（${CHARS[S.char || 'croc'].name}・${S.mode === 'add' ? '加法' : '乘法'}）</button></p>` : ''}`;
+      <p class="center">已加入 ${Object.keys(players).length} 人</p>${setup}${ready}`;
   } else if (S.phase === 'answer') {
-    html = `${stage}<p class="center">數一數${CHARS[S.round.char || 'croc'].name}身上有幾件配件，${op} 乘數卡，在手機上找答案！</p>
-      <p class="center timer" id="timer"></p><p class="center">已作答 ${Object.keys(answers).length} / ${Object.keys(players).length}</p>
-      <p class="center"><button class="btn alt" onclick="finishRound()">提早公布</button></p>`;
+    html = `${stage}<p class="center">${promptText(r)}　在手機上點答案</p>
+      ${S.set.secs ? '<p class="center timer" id="timer"></p>' : ''}<p class="center">已作答 ${Object.keys(answers).length} / ${Object.keys(players).length}</p>
+      <p class="center"><button class="btn alt" onclick="finishRound()">${S.set.secs ? '提早公布' : '公布答案'}</button></p>`;
   } else if (S.phase === 'reveal') {
     const pts = S.reveal.pts || {};
     const gains = Object.keys(pts).filter((u) => pts[u] > 0).sort((a, b) => pts[b] - pts[a]);
-    const last = S.round.n >= S.total;
-    html = `${stage}<h2 class="center">${S.round.items.length} ${op} ${S.round.mult} = ${S.reveal.answer}</h2>
-      <div class="board">${boardHTML(S.board)}</div>
+    const last = r.n >= S.total;
+    html = `${stage}<h2 class="center">${equationText(r)}</h2>
+      ${boardHTML(boardOf(r, S.board))}
       <p class="center">${gains.map((u) => `${nameOf(u)} <span class="gain">+${pts[u]}</span>`).join('　') || '這題沒人答對'}</p>
-      <p class="center"><button class="btn" onclick="${last ? "room.child('state/phase').set('end')" : 'startRound()'}">${last ? '看最後結果' : `下一題（${S.round.n + 1}/${S.total}）`}</button></p>`;
+      <p class="center"><button class="btn" onclick="${last ? "room.child('state/phase').set('end')" : 'startRound()'}">${last ? '看最後結果' : `下一題（${r.n + 1}/${S.total}）`}</button></p>`;
   } else if (S.phase === 'end') {
-    html = `<h2 class="center">🏆 ${ranked[0] ? nameOf(ranked[0]) : ''} 贏了！</h2>${modeBtns}`;
+    html = S.set.ranked
+      ? `<h2 class="center">🏆 ${ranked[0] ? nameOf(ranked[0]) : ''} 贏了！</h2>${setup}`
+      : `<h2 class="center">🎉 大家都完成了！</h2>${setup}`;
   }
   $('view').innerHTML = html;
-  // 畫面每次重畫，選單要還原成剛剛選的角色
-  const cs = $('charSel');
-  if (cs) { cs.value = pickedChar || S.char || 'cat'; cs.onchange = () => { pickedChar = cs.value; }; }
+  bindSettings($('view'), draft);
   if (S.phase === 'reveal') document.querySelector(`.ncard[data-card="${S.reveal.card}"]`)?.classList.add('right');
   document.querySelectorAll('#view .ncard').forEach((b) => { b.disabled = true; });
 }

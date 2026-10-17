@@ -17,21 +17,44 @@ function makeBoard(rng = Math.random) {
     return Array.from({ length: 25 }, (_, i) => nums.slice(i * 4, i * 4 + 4));
 }
 
-function pickItems(rng = Math.random, char = 'croc') {
+// 大字盤面：每題重洗，9 張各一個數字；干擾數字取答案附近，才需要真的算對
+function makeBigBoard(answer, rng = Math.random) {
+    const lo = Math.max(1, answer - 6);
+    const others = shuffle(Array.from({ length: 13 }, (_, i) => lo + i).filter((n) => n !== answer), rng).slice(0, 8);
+    return shuffle([answer, ...others], rng).map((n) => [n]);
+}
+
+function pickItems(rng = Math.random, char = 'croc', maxItems = MAX_ITEMS) {
     const c = CHARS[char];
-    const count = 1 + Math.floor(rng() * MAX_ITEMS);
+    const count = 1 + Math.floor(rng() * maxItems);
     const pool = shuffle([...c.groups.map((g) => g[Math.floor(rng() * g.length)]), ...c.other], rng);
     return pool.slice(0, count);
 }
 
 // 乘數卡每 3 題換一張，跟桌遊「疊上新的乘數卡」的節奏差不多
-function makeRound(n, prevMult, rng = Math.random, char = 'croc') {
+function makeRound(n, prevMult, rng = Math.random, char = 'croc', set = {}) {
     const mult = (n - 1) % 3 === 0 || !prevMult ? 1 + Math.floor(rng() * 10) : prevMult;
-    return { n, items: pickItems(rng, char), mult, char };
+    const round = { n, items: pickItems(rng, char, set.maxItems || MAX_ITEMS), mult, char, op: set.op || 'mul' };
+    if (set.board === 'big') round.board = makeBigBoard(answerOf(round), rng);
+    return round;
 }
 
-function answerOf(round, mode) {
-    return mode === 'add' ? round.items.length + round.mult : round.items.length * round.mult;
+function answerOf(round, op = round.op) {
+    const k = round.items.length;
+    return op === 'count' ? k : op === 'add' ? k + round.mult : k * round.mult;
+}
+
+// 大字盤面跟著題目走，25 張盤面整局固定
+function boardOf(round, gameBoard) { return (round && round.board) || gameBoard; }
+
+const OP_SIGN = { add: '+', mul: '×' };
+function equationText(round) {
+    const k = round.items.length;
+    return round.op === 'count' ? `一共 ${k} 件` : `${k} ${OP_SIGN[round.op]} ${round.mult} = ${answerOf(round)}`;
+}
+function promptText(round) {
+    const name = CHARS[round.char || 'croc'].name;
+    return round.op === 'count' ? `${name}身上有幾件配件？` : `數一數${name}身上的配件，${OP_SIGN[round.op]} 乘數卡，找出答案！`;
 }
 
 function findCard(board, answer) {
@@ -39,14 +62,15 @@ function findCard(board, answer) {
 }
 
 // 依名次給分：第 1 名 3 分、第 2 名 2 分、其他答對 1 分；答錯 0 分
+// ranked = false 時不比快，答對一律 1 分
 const RANK_POINTS = [3, 2];
-function scoreAnswers(answers, correctCard) {
+function scoreAnswers(answers, correctCard, ranked = true) {
     const correct = Object.entries(answers || {})
         .filter(([, a]) => a && a.card === correctCard)
         .sort((x, y) => x[1].at - y[1].at);
     const pts = {};
     Object.keys(answers || {}).forEach((uid) => { pts[uid] = 0; });
-    correct.forEach(([uid], i) => { pts[uid] = RANK_POINTS[i] ?? 1; });
+    correct.forEach(([uid], i) => { pts[uid] = ranked ? RANK_POINTS[i] ?? 1 : 1; });
     return pts;
 }
 
@@ -126,12 +150,57 @@ function charSVG(items, char = 'croc') {
     const body = c.parts.filter(([id]) => id === 'base' || on.has(id)).map(([, svg]) => svg).join('');
     return `<svg viewBox="${c.viewBox}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${c.name}">${body}</svg>`;
 }
-function boardHTML(board, cls = '') {
-    return board.map((card, i) =>
-        `<button class="ncard ${cls}" data-card="${i}">${card.map((n) => `<span>${n}</span>`).join('')}</button>`
-    ).join('');
+function boardHTML(board) {
+    const big = board[0].length === 1;
+    return `<div class="board${big ? ' big' : ''}">${board.map((card, i) =>
+        `<button class="ncard" data-card="${i}">${card.map((n) => `<span>${n}</span>`).join('')}</button>`
+    ).join('')}</div>`;
 }
 
+// ── 難度設定：三種預設，也可以逐項調 ──
+const PRESETS = {
+    elder: { op: 'count', board: 'big', secs: 0, maxItems: 5, ranked: false },
+    kid: { op: 'add', board: 'full', secs: 30, maxItems: 8, ranked: true },
+    adult: { op: 'mul', board: 'full', secs: 10, maxItems: 8, ranked: true },
+};
+const PRESET_NAMES = { elder: '長者', kid: '兒童', adult: '一般' };
+const SETTING_FIELDS = [
+    ['char', '角色', [['cat', '🐱 摺耳貓'], ['croc', '🐊 鱷魚']]],
+    ['op', '玩法', [['count', '只數配件'], ['add', '數完加乘數'], ['mul', '數完乘乘數']]],
+    ['board', '盤面', [['big', '大字 9 張'], ['full', '25 張（1–100）']]],
+    ['secs', '計時', [[0, '不計時'], [30, '30 秒'], [20, '20 秒'], [10, '10 秒']]],
+    ['maxItems', '配件', [[5, '最多 5 件'], [8, '最多 8 件']]],
+    ['ranked', '計分', [[false, '答對就 1 分'], [true, '越快分越高']]],
+];
+const DEFAULT_SETTINGS = { char: 'cat', ...PRESETS.kid };
+
+function settingsHTML(cur, skip = []) {
+    const presets = Object.keys(PRESETS).map((k) => `<button type="button" class="btn alt" data-preset="${k}">${PRESET_NAMES[k]}</button>`).join('');
+    const fields = SETTING_FIELDS.filter(([key]) => !skip.includes(key)).map(([key, label, opts]) =>
+        `<label>${label} <select data-set="${key}">${opts.map(([v, t]) => `<option value="${v}"${String(cur[key]) === String(v) ? ' selected' : ''}>${t}</option>`).join('')}</select></label>`
+    ).join('');
+    return `<div class="settings"><div class="row">快速選：${presets}</div><div class="row">${fields}</div></div>`;
+}
+
+const parseSetting = (key, v) => (key === 'secs' || key === 'maxItems' ? Number(v) : key === 'ranked' ? v === 'true' : v);
+
+// 表單改了就寫回 cur（同一個物件），畫面重畫時再用 cur 畫，選過的值不會跳掉
+function bindSettings(root, cur) {
+    const sync = () => root.querySelectorAll('[data-set]').forEach((el) => { el.value = String(cur[el.dataset.set]); });
+    root.querySelectorAll('[data-set]').forEach((el) => {
+        el.onchange = () => { cur[el.dataset.set] = parseSetting(el.dataset.set, el.value); saveSettings(cur); };
+    });
+    root.querySelectorAll('[data-preset]').forEach((b) => {
+        b.onclick = () => { Object.assign(cur, PRESETS[b.dataset.preset]); saveSettings(cur); sync(); };
+    });
+}
+
+// 記住上次的設定只是方便，讀不到就用預設
+function loadSettings() {
+    try { return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('outfit-settings') || '{}') }; } catch { return { ...DEFAULT_SETTINGS }; }
+}
+function saveSettings(cur) { try { localStorage.setItem('outfit-settings', JSON.stringify(cur)); } catch { /* 私密模式存不了就算了 */ } }
+
 if (typeof module !== 'undefined') {
-    module.exports = { shuffle, makeBoard, pickItems, makeRound, answerOf, findCard, scoreAnswers, charSVG, CHARS, MAX_ITEMS };
+    module.exports = { shuffle, makeBoard, makeBigBoard, pickItems, makeRound, answerOf, boardOf, equationText, findCard, scoreAnswers, charSVG, CHARS, MAX_ITEMS, PRESETS };
 }

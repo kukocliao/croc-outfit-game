@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>穿搭數一數 玩家</title>
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 <style>
   body { padding: 10px; }
   header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 8px; }
@@ -23,7 +23,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=1"></script>
 <script src="sync.js?v=1"></script>
-<script src="game.js?v=3"></script>
+<script src="game.js?v=4"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let uid, S = {}, me, myAns = null, myRef = null, note = '';
@@ -32,7 +32,7 @@ signIn().then((u) => {
   uid = u;
   room.child('players/' + uid).on('value', (s) => { me = s.val(); render(); });
   room.child('scores/' + uid).on('value', (s) => { $('score').textContent = s.val()?.score || 0; });
-  room.child('state').on('value', (s) => { S = s.val() || {}; watchMine(); render(); });
+  room.child('state').on('value', (s) => { S = s.val() || {}; S.set = S.set || { ...DEFAULT_SETTINGS }; watchMine(); render(); });
 }).catch((e) => { $('view').innerHTML = `<p class="msg">連線失敗：${escapeHtml(e.message)}</p>`; });
 
 // 自己這題答過沒有，以資料庫為準（重新整理後也能還原）
@@ -70,10 +70,10 @@ function render() {
   if (S.phase === 'answer' || S.phase === 'reveal') {
     const reveal = S.phase === 'reveal';
     const msg = reveal
-      ? (myAns && myAns.card === S.reveal.card ? `答對了！ +${S.reveal.pts?.[uid] || 0} 分` : `答案是 ${S.reveal.answer}`)
-      : (note || (myAns ? '已送出，等公布答案' : '看大螢幕數配件，找出答案那張卡！'));
-    v.innerHTML = `<p class="msg">第 ${S.round.n} 題　${reveal ? '' : '<span class="timer" id="timer"></span>'}</p>
-      <p class="msg">${msg}</p><div class="board">${boardHTML(S.board)}</div>`;
+      ? (myAns && myAns.card === S.reveal.card ? `答對了！ +${S.reveal.pts?.[uid] || 0} 分` : equationText(S.round))
+      : (note || (myAns ? '已送出，等公布答案' : '看大螢幕，' + promptText(S.round)));
+    v.innerHTML = `<p class="msg">第 ${S.round.n} 題　${reveal || !S.set.secs ? '' : '<span class="timer" id="timer"></span>'}</p>
+      <p class="msg">${msg}</p>${boardHTML(boardOf(S.round, S.board))}`;
     document.querySelectorAll('.ncard').forEach((b) => {
       const i = +b.dataset.card;
       b.disabled = reveal || !!myAns;
@@ -86,7 +86,7 @@ function render() {
   } else if (S.phase === 'end') {
     v.innerHTML = `<p class="big">遊戲結束</p><p class="msg">你拿到 ${$('score').textContent} 分</p>`;
   } else {
-    v.innerHTML = `<p class="big">${CHARS[S.char || 'croc'].emoji}</p><p class="msg">嗨 ${escapeHtml(me.name)}，等主持人開始</p>`;
+    v.innerHTML = `<p class="big">${CHARS[S.set.char].emoji}</p><p class="msg">嗨 ${escapeHtml(me.name)}，等主持人開始</p>`;
   }
 }
 
