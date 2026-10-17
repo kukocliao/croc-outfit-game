@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>鱷魚穿搭 玩家</title>
+<link rel="stylesheet" href="style.css?v=1">
+<style>
+  body { padding: 10px; }
+  header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 8px; }
+  .msg { text-align: center; font-size: 1.2rem; margin: 10px 0; }
+  .timer { font-size: 1.6rem; }
+  input { font-size: 1.3rem; padding: 10px; border-radius: 10px; border: 2px solid #aaa; width: 100%; margin: 12px 0; }
+  .big { font-size: 2.4rem; font-weight: 900; text-align: center; }
+</style>
+</head>
+<body>
+<header><span id="who"></span><span>分數 <b id="score">0</b></span></header>
+<div id="view"><p class="msg">連線中…</p></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js?v=1"></script>
+<script src="sync.js?v=1"></script>
+<script src="game.js?v=1"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let uid, S = {}, me, myAns = null, myRef = null, note = '';
+
+signIn().then((u) => {
+  uid = u;
+  room.child('players/' + uid).on('value', (s) => { me = s.val(); render(); });
+  room.child('scores/' + uid).on('value', (s) => { $('score').textContent = s.val()?.score || 0; });
+  room.child('state').on('value', (s) => { S = s.val() || {}; watchMine(); render(); });
+}).catch((e) => { $('view').innerHTML = `<p class="msg">連線失敗：${escapeHtml(e.message)}</p>`; });
+
+// 自己這題答過沒有，以資料庫為準（重新整理後也能還原）
+function watchMine() {
+  const n = S.round ? String(S.round.n) : null;
+  if (myRef && myRef.parent.key !== n) { myRef.off(); myRef = null; myAns = null; note = ''; }
+  if (n && !myRef) {
+    myRef = room.child(`answers/${n}/${uid}`);
+    myRef.on('value', (s) => { if (s.val()) myAns = s.val(); render(); });
+  }
+}
+
+function join() {
+  const name = cleanName($('name').value);
+  if (!name) { $('name').value = ''; $('name').placeholder = '名字不能空白或只有符號'; return; }
+  room.child('players/' + uid).set({ name });
+}
+
+function pick(i) {
+  if (S.phase !== 'answer' || myAns || serverNow() > S.round.endsAt) return;
+  myAns = { card: i };
+  render();
+  myRef.set({ card: i, at: firebase.database.ServerValue.TIMESTAMP })
+    .catch(() => { myAns = null; note = '時間到了，這次沒送出'; render(); });
+}
+
+function render() {
+  if (!uid) return;
+  $('who').textContent = me ? me.name : '';   // textContent 不會被當成 HTML
+  const v = $('view');
+  if (!me) {
+    v.innerHTML = `<p class="msg">輸入你的名字加入遊戲</p><input id="name" maxlength="12" autocomplete="off"><button class="btn" style="width:100%" onclick="join()">加入</button>`;
+    return;
+  }
+  if (S.phase === 'answer' || S.phase === 'reveal') {
+    const reveal = S.phase === 'reveal';
+    const msg = reveal
+      ? (myAns && myAns.card === S.reveal.card ? `答對了！ +${S.reveal.pts?.[uid] || 0} 分` : `答案是 ${S.reveal.answer}`)
+      : (note || (myAns ? '已送出，等公布答案' : '看大螢幕數配件，找出答案那張卡！'));
+    v.innerHTML = `<p class="msg">第 ${S.round.n} 題　${reveal ? '' : '<span class="timer" id="timer"></span>'}</p>
+      <p class="msg">${msg}</p><div class="board">${boardHTML(S.board)}</div>`;
+    document.querySelectorAll('.ncard').forEach((b) => {
+      const i = +b.dataset.card;
+      b.disabled = reveal || !!myAns;
+      if (myAns && myAns.card === i) b.classList.add('picked');
+      if (reveal && i === S.reveal.card) b.classList.add('right');
+      else if (reveal && myAns && myAns.card === i) b.classList.add('wrong');
+      b.onclick = () => pick(i);
+    });
+    tickTimer();
+  } else if (S.phase === 'end') {
+    v.innerHTML = `<p class="big">遊戲結束</p><p class="msg">你拿到 ${$('score').textContent} 分</p>`;
+  } else {
+    v.innerHTML = `<p class="big">🐊</p><p class="msg">嗨 ${escapeHtml(me.name)}，等主持人開始</p>`;
+  }
+}
+
+// 倒數只負責顯示，剩餘秒數每次都從 endsAt 重算
+function tickTimer() {
+  const t = $('timer');
+  if (t && S.phase === 'answer') t.textContent = Math.max(0, Math.ceil((S.round.endsAt - serverNow()) / 1000)) + ' 秒';
+}
+setInterval(tickTimer, 250);
+</script>
+</body>
+</html>

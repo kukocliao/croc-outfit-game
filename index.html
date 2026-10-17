@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>鱷魚穿搭</title>
+<link rel="stylesheet" href="style.css?v=1">
+<style>
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 18px; padding: 16px; }
+  a.btn { text-decoration: none; width: min(320px, 100%); text-align: center; }
+  .croc { width: 160px; height: 200px; }
+</style>
+</head>
+<body>
+  <h1>🐊 鱷魚穿搭</h1>
+  <div class="croc" id="croc"></div>
+  <p>數鱷魚身上的配件，乘上乘數卡，最快找到答案的人得分！</p>
+  <a class="btn" href="player.html">我是玩家（手機）</a>
+  <a class="btn alt" href="host.html">主控端（大螢幕）</a>
+  <a class="btn" style="background:#2c5c9c" href="duel.html">雙人對戰（平板）</a>
+<script src="game.js?v=1"></script>
+<script>document.getElementById('croc').innerHTML = crocSVG(['cap', 'bowtie', 'necklace', 'belt', 'socks']);</script>
+</body>
+</html>
