@@ -23,4 +23,12 @@ assert.deepStrictEqual(pts, { a: 1, b: 3, c: 0, d: 2, e: 1 });
 assert.deepStrictEqual(g.scoreAnswers(null, 3), {});
 assert(g.charSVG(['beanie'], 'cat').includes('#6E6D72'), '貓的毛帽要畫出來');
 assert(!g.charSVG([], 'cat').includes('#6E6D72'), '沒選毛帽就不畫');
+// 瀏覽器裡各 <script> 共用全域，撞名（例如兩邊都宣告 S）整頁會掛；接起來編譯一次就抓得到
+const fs = require('fs'), vm = require('vm');
+for (const page of ['host.html', 'player.html', 'duel.html', 'index.html']) {
+    const html = fs.readFileSync(page, 'utf8');
+    const srcs = [...html.matchAll(/<script src="(game|sync)\.js[^"]*">/g)].map((m) => fs.readFileSync(m[1] + '.js', 'utf8'));
+    const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    new vm.Script([...srcs, ...inline].join('\n;\n'), { filename: page });
+}
 console.log('all tests passed');
