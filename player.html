@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>鱷魚穿搭 玩家</title>
+<title>穿搭數一數 玩家</title>
 <link rel="stylesheet" href="style.css?v=1">
 <style>
   body { padding: 10px; }
@@ -23,7 +23,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=1"></script>
 <script src="sync.js?v=1"></script>
-<script src="game.js?v=1"></script>
+<script src="game.js?v=2"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let uid, S = {}, me, myAns = null, myRef = null, note = '';
@@ -86,7 +86,7 @@ function render() {
   } else if (S.phase === 'end') {
     v.innerHTML = `<p class="big">遊戲結束</p><p class="msg">你拿到 ${$('score').textContent} 分</p>`;
   } else {
-    v.innerHTML = `<p class="big">🐊</p><p class="msg">嗨 ${escapeHtml(me.name)}，等主持人開始</p>`;
+    v.innerHTML = `<p class="big">${CHARS[S.char || 'croc'].emoji}</p><p class="msg">嗨 ${escapeHtml(me.name)}，等主持人開始</p>`;
   }
 }
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>鱷魚穿搭 主控端</title>
+<title>穿搭數一數 主控端</title>
 <link rel="stylesheet" href="style.css?v=1">
 <style>
   body { display: flex; min-height: 100vh; }
@@ -22,7 +22,7 @@
 </head>
 <body>
 <main>
-  <h1>🐊 鱷魚穿搭</h1>
+  <h1>🐱🐊 穿搭數一數</h1>
   <p id="err" style="color:#c00"></p>
   <div id="view"></div>
 </main>
@@ -37,12 +37,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=1"></script>
 <script src="sync.js?v=1"></script>
-<script src="game.js?v=1"></script>
+<script src="game.js?v=2"></script>
 <script>
 const SECS = 20, TOTAL = 10;
 const GRACE_MS = 800;   // 時間到後多等一下，讓剛好在最後一刻送出的答案落地
 const $ = (id) => document.getElementById(id);
 const playerUrl = location.href.replace(/host\.html.*$/, 'player.html');
+let pickedChar = null;
 let S = { phase: 'lobby' }, players = {}, scores = {}, answers = {}, ansRef = null, finishing = false;
 
 signIn()
@@ -74,12 +75,13 @@ function watchAnswers() {
 }
 
 function newGame(mode) {
-  room.update({ answers: null, scores: null, state: { phase: 'lobby', mode, board: makeBoard(), total: TOTAL } });
+  const char = document.getElementById('charSel').value;
+  room.update({ answers: null, scores: null, state: { phase: 'lobby', mode, char, board: makeBoard(), total: TOTAL } });
 }
 
 function startRound() {
   const n = (S.round?.n || 0) + 1;
-  const r = makeRound(n, S.round?.mult);
+  const r = makeRound(n, S.round?.mult, Math.random, S.char || 'croc');
   r.k = String(n);   // 字串題號，規則用它比對 answers/$round
   r.endsAt = serverNow() + SECS * 1000;
   room.update({ answers: null, 'state/phase': 'answer', 'state/round': r, 'state/reveal': null });
@@ -121,16 +123,16 @@ function render() {
   $('rank').innerHTML = ranked.map((u) => `<li>${nameOf(u)}　<b>${scores[u]?.score || 0}</b></li>`).join('');
 
   const op = S.mode === 'add' ? '+' : '×';
-  const stage = S.round ? `<div class="stage"><div class="croc">${crocSVG(S.round.items)}</div>${op}<div class="mcard">${S.round.mult}</div></div>` : '';
-  const modeBtns = `<div class="row"><button class="btn" onclick="newGame('mul')">新遊戲：乘法</button><button class="btn alt" onclick="newGame('add')">新遊戲：加法（簡單）</button></div>`;
+  const stage = S.round ? `<div class="stage"><div class="croc">${charSVG(S.round.items, S.round.char)}</div>${op}<div class="mcard">${S.round.mult}</div></div>` : '';
+  const modeBtns = `<div class="row"><select id="charSel" style="font-size:1.1rem;padding:10px;border-radius:12px"><option value="cat">🐱 摺耳貓</option><option value="croc">🐊 鱷魚</option></select><button class="btn" onclick="newGame('mul')">新遊戲：乘法</button><button class="btn alt" onclick="newGame('add')">新遊戲：加法（簡單）</button></div>`;
   let html = '';
 
   if (S.phase === 'lobby') {
     html = `<p class="center">手機打開這個網址加入：</p><p class="url center">${escapeHtml(playerUrl)}</p>
       <p class="center">已加入 ${Object.keys(players).length} 人</p>${modeBtns}
-      ${S.board ? `<p class="center"><button class="btn" onclick="startRound()">開始第 1 題（${S.mode === 'add' ? '加法' : '乘法'}）</button></p>` : ''}`;
+      ${S.board ? `<p class="center"><button class="btn" onclick="startRound()">開始第 1 題（${CHARS[S.char || 'croc'].name}・${S.mode === 'add' ? '加法' : '乘法'}）</button></p>` : ''}`;
   } else if (S.phase === 'answer') {
-    html = `${stage}<p class="center">數一數鱷魚身上有幾件配件，${op} 乘數卡，在手機上找答案！</p>
+    html = `${stage}<p class="center">數一數${CHARS[S.round.char || 'croc'].name}身上有幾件配件，${op} 乘數卡，在手機上找答案！</p>
       <p class="center timer" id="timer"></p><p class="center">已作答 ${Object.keys(answers).length} / ${Object.keys(players).length}</p>
       <p class="center"><button class="btn alt" onclick="finishRound()">提早公布</button></p>`;
   } else if (S.phase === 'reveal') {
@@ -145,6 +147,9 @@ function render() {
     html = `<h2 class="center">🏆 ${ranked[0] ? nameOf(ranked[0]) : ''} 贏了！</h2>${modeBtns}`;
   }
   $('view').innerHTML = html;
+  // 畫面每次重畫，選單要還原成剛剛選的角色
+  const cs = $('charSel');
+  if (cs) { cs.value = pickedChar || S.char || 'cat'; cs.onchange = () => { pickedChar = cs.value; }; }
   if (S.phase === 'reveal') document.querySelector(`.ncard[data-card="${S.reveal.card}"]`)?.classList.add('right');
   document.querySelectorAll('#view .ncard').forEach((b) => { b.disabled = true; });
 }

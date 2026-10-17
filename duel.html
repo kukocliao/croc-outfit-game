@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>鱷魚穿搭 雙人對戰</title>
+<title>穿搭數一數 雙人對戰</title>
 <link rel="stylesheet" href="style.css?v=1">
 <style>
   html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
@@ -33,28 +33,29 @@
 <section class="half" id="h1"></section>
 
 <div class="menu" id="menu">
-  <h1>🐊 鱷魚穿搭 雙人對戰</h1>
+  <h1>🐱🐊 穿搭數一數 雙人對戰</h1>
+  <select id="charSel" style="font-size:1.1rem;padding:10px;border-radius:12px"><option value="cat">🐱 摺耳貓</option><option value="croc">🐊 鱷魚</option></select>
   <p id="result"></p>
   <p>平板平放，兩人面對面各顧一邊</p>
   <button class="btn" onclick="start('mul')">開始：乘法</button>
   <button class="btn alt" onclick="start('add')">開始：加法（簡單）</button>
 </div>
 
-<script src="game.js?v=1"></script>
+<script src="game.js?v=2"></script>
 <script>
 // 純本機模式，不連 Firebase；先答對的人得 1 分，答錯這題鎖住
 const SECS = 20, TOTAL = 10, REVEAL_MS = 3000;
 const $ = (id) => document.getElementById(id);
-let mode, board, round, score, lock, picks, winner, phase = 'menu', endsAt;
+let mode, char, board, round, score, lock, picks, winner, phase = 'menu', endsAt;
 
 function start(m) {
-  mode = m; board = makeBoard(); score = [0, 0]; round = null;
+  mode = m; char = $('charSel').value; board = makeBoard(); score = [0, 0]; round = null;
   $('menu').classList.add('hidden');
   next();
 }
 
 function next() {
-  round = makeRound((round?.n || 0) + 1, round?.mult);
+  round = makeRound((round?.n || 0) + 1, round?.mult, Math.random, char);
   lock = [false, false]; picks = [null, null]; winner = null;
   phase = 'answer';
   endsAt = Date.now() + SECS * 1000;
@@ -86,7 +87,7 @@ function half(p) {
   const ans = answerOf(round, mode);
   let msg = lock[p] ? '答錯了，等下一題' : `第 ${round.n} 題`;
   if (phase === 'reveal') msg = winner === p ? '你最快！+1' : `${round.items.length} ${op} ${round.mult} = ${ans}`;
-  $('h' + p).innerHTML = `<div class="side"><div class="croc">${crocSVG(round.items)}</div><div class="mcard">${op}${round.mult}</div><div class="msg">${msg}</div></div>
+  $('h' + p).innerHTML = `<div class="side"><div class="croc">${charSVG(round.items, round.char)}</div><div class="mcard">${op}${round.mult}</div><div class="msg">${msg}</div></div>
     <div class="board">${boardHTML(board)}</div>`;
   $('h' + p).querySelectorAll('.ncard').forEach((b) => {
     const i = +b.dataset.card;
