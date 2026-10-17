@@ -43,7 +43,8 @@
     <option value="3">分 3 隊搶答</option>
     <option value="4">分 4 隊搶答</option>
   </select></label>
-  <button class="btn" onclick="start()">開始</button>
+  <button class="btn" onclick="start()">開始新的一局</button>
+  <button class="btn alt hidden" id="resumeBtn" onclick="resume()">繼續這局</button>
 </div>
 
 <script src="game.js?v=4"></script>
@@ -61,6 +62,7 @@ function start() {
   set = { ...draft }; teams = +$('teamSel').value;
   gameBoard = makeBoard(); round = null; teamScore = [0, 0, 0, 0]; coopRight = 0;
   $('menu').classList.add('hidden');
+  $('resumeBtn').classList.add('hidden');
   next();
 }
 
@@ -93,6 +95,7 @@ function giveUp() { phase = 'reveal'; render(); }
 
 function finish() {
   phase = 'menu';
+  $('resumeBtn').classList.add('hidden');
   if (teams) {
     const list = TEAMS.slice(0, teams).map(([name], t) => [name, teamScore[t]]).sort((a, b) => b[1] - a[1]);
     const tie = list[0][1] === list[1][1];
@@ -103,10 +106,20 @@ function finish() {
   $('menu').classList.remove('hidden');
 }
 
+// 玩到一半打開設定：先暫停，誤按的話可以回去繼續（倒數也接著算）
+let paused = null;
 function openMenu() {
+  if (phase === 'menu') return;
+  paused = { phase, left: endsAt - Date.now() };
   $('result').textContent = '';
   phase = 'menu';
+  $('resumeBtn').classList.remove('hidden');
   $('menu').classList.remove('hidden');
+}
+function resume() {
+  phase = paused.phase; endsAt = Date.now() + paused.left;
+  $('menu').classList.add('hidden');
+  render();
 }
 
 function render() {

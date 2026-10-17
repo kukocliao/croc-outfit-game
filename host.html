@@ -44,7 +44,8 @@ const UNTIMED_MS = 6 * 3600 * 1000;   // 不計時：規則仍要 endsAt，給�
 const GRACE_MS = 800;   // 時間到後多等一下，讓剛好在最後一刻送出的答案落地
 const $ = (id) => document.getElementById(id);
 const playerUrl = location.href.replace(/host\.html.*$/, 'player.html');
-const draft = loadSettings();   // 開局前在表單上調的設定
+const draft = loadSettings();
+let lastHtml = '';   // 開局前在表單上調的設定
 let S = { phase: 'lobby' }, players = {}, scores = {}, answers = {}, ansRef = null, finishing = false;
 
 signIn()
@@ -131,7 +132,7 @@ function render() {
     const ready = S.board && S.set
       ? `<p class="center"><button class="btn" onclick="startRound()">開始第 1 題（${CHARS[S.set.char].name}・${SETTING_FIELDS[1][2].find(([v]) => v === S.set.op)[1]}）</button></p>` : '';
     html = `<p class="center">手機打開這個網址加入：</p><p class="url center">${escapeHtml(playerUrl)}</p>
-      <p class="center">已加入 ${Object.keys(players).length} 人</p>${setup}${ready}`;
+      <p class="center">已加入 <span id="pcount"></span> 人</p>${setup}${ready}`;
   } else if (S.phase === 'answer') {
     html = `${stage}<p class="center">${promptText(r)}　在手機上點答案</p>
       ${S.set.secs ? '<p class="center timer" id="timer"></p>' : ''}<p class="center">已作答 ${Object.keys(answers).length} / ${Object.keys(players).length}</p>
@@ -149,8 +150,9 @@ function render() {
       ? `<h2 class="center">🏆 ${ranked[0] ? nameOf(ranked[0]) : ''} 贏了！</h2>${setup}`
       : `<h2 class="center">🎉 大家都完成了！</h2>${setup}`;
   }
-  $('view').innerHTML = html;
-  bindSettings($('view'), draft);
+  // 內容沒變就不重畫：玩家加入只改人數，主持人正在調的選單不會被收掉
+  if (html !== lastHtml) { $('view').innerHTML = html; lastHtml = html; bindSettings($('view'), draft); }
+  if ($('pcount')) $('pcount').textContent = Object.keys(players).length;
   if (S.phase === 'reveal') document.querySelector(`.ncard[data-card="${S.reveal.card}"]`)?.classList.add('right');
   document.querySelectorAll('#view .ncard').forEach((b) => { b.disabled = true; });
 }
