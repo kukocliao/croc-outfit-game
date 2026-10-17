@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>穿搭數一數 玩法說明</title>
+<link rel="stylesheet" href="style.css?v=2">
+<style>
+  body { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; line-height: 1.75; font-size: 1.05rem; }
+  h1 { margin-bottom: 4px; }
+  h2 { margin-top: 2.2em; padding-top: .6em; border-top: 3px solid #3a8f3a; }
+  h3 { margin-bottom: .3em; }
+  .chars { display: flex; gap: 16px; justify-content: center; }
+  .chars .croc { width: 150px; height: 190px; }
+  table { border-collapse: collapse; width: 100%; background: #fff; font-size: .98rem; }
+  th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: #eef5ea; }
+  .say { background: #fff8e6; border-left: 6px solid #e0a526; padding: 10px 16px; border-radius: 8px; margin: 10px 0; }
+  .say p { margin: .3em 0; }
+  .tip { background: #eef3fb; border-left: 6px solid #2c5c9c; padding: 8px 16px; border-radius: 8px; }
+  nav { background: #fff; padding: 10px 16px; border-radius: 12px; }
+  nav a { margin-right: 14px; white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+  @media print { nav, .noprint { display: none; } h2 { break-before: page; border-top: 0; } body { font-size: 11pt; } }
+</style>
+</head>
+<body>
+<h1>🐱🐊 穿搭數一數 玩法說明</h1>
+<p>帶活動前看這頁就好。每個模式都附一段「開場介紹詞」，可以直接念給玩家聽。</p>
+<nav>
+  <a href="#rule">基本玩法</a><a href="#items">什麼算一件</a><a href="#level">難度</a>
+  <a href="#phone">手機多人</a><a href="#duel">平板雙人</a><a href="#group">團體投影</a><a href="#solo">一個人</a>
+</nav>
+
+<h2 id="rule">基本玩法</h2>
+<div class="chars"><div class="croc" id="c1"></div><div class="croc" id="c2"></div></div>
+<p>畫面上有一隻摺耳貓（或鱷魚），身上穿戴了幾樣東西。數一數有幾件，再依照難度，加上或乘上旁邊那張綠色的數字卡，最後在數字卡裡找到答案。</p>
+<p>舉例：貓戴了毛帽、圍巾、黑手套，一共 3 件；綠色卡是 ×4，答案就是 12，找到有 12 的那張卡點下去。設成「只數配件」時沒有綠色卡，答案就是 3。</p>
+<p>一局 10 題。綠色乘數卡每 3 題換一張。</p>
+
+<h2 id="items">什麼算一件</h2>
+<p>玩家最常卡在這裡，開始前先講清楚：<strong>成雙的算一件</strong>（一雙襪子、一雙靴子），<strong>大衣上的釦子、口袋、袖口都算大衣的一部分</strong>，不另外算。</p>
+<div class="table-wrap"><table>
+  <tr><th>角色</th><th>可能出現的配件</th></tr>
+  <tr><td>🐱 摺耳貓</td><td>頭上一樣（灰毛帽／草帽／粉紅蝴蝶結，三選一）、脖子一樣（酒紅圍巾／藍領結，二選一）、大衣、黑手套（只戴在畫面右邊那隻手）、眼鏡、耳環、包包、皮帶、襪子、靴子、尾巴上的蝴蝶結、手錶</td></tr>
+  <tr><td>🐊 鱷魚</td><td>頭上一樣（草帽／鴨舌帽／粉紅蝴蝶結，三選一）、領結、項鍊、背心、內褲、皮帶、包包、手錶、耳環、襪子、靴子、尾巴上的蝴蝶結</td></tr>
+</table></div>
+<p class="tip">貓本來的樣子是一隻奶油色的貓，什麼都沒穿。影片裡常見的毛帽、圍巾、大衣，在這個遊戲裡都要算進去。</p>
+
+<h2 id="level">難度怎麼選</h2>
+<p>每個模式開局前都有同一組設定。按「快速選」的長者、兒童、一般，就會一次填好；也可以再逐項調。上次選過的設定，同一台裝置會記住。</p>
+<div class="table-wrap"><table>
+  <tr><th>快速選</th><th>玩法</th><th>盤面</th><th>計時</th><th>配件</th><th>計分（手機多人）</th></tr>
+  <tr><td>長者</td><td>只數配件</td><td>大字 9 張，每張一個數字</td><td>不計時</td><td>最多 5 件</td><td>答對就 1 分</td></tr>
+  <tr><td>兒童</td><td>數完加乘數</td><td>25 張，1 到 100</td><td>30 秒</td><td>最多 8 件</td><td>越快分越高</td></tr>
+  <tr><td>一般</td><td>數完乘乘數</td><td>25 張，1 到 100</td><td>10 秒</td><td>最多 8 件</td><td>越快分越高</td></tr>
+</table></div>
+<p>大字 9 張的盤面每題都會換，裡面的數字都很接近答案，所以還是要真的數對才找得到。孩子剛接觸時，可以先用「只數配件＋大字 9 張」，熟了再換成加法、25 張。</p>
+
+<h2 id="phone">模式一：手機多人（大螢幕＋每人一支手機）</h2>
+<p>適合：教室、團康，一群人各自有手機。兒童、一般人都適合；長者如果不熟手機，改用團體模式比較順。</p>
+<h3>準備</h3>
+<ul>
+  <li>一台接大螢幕或投影的電腦（主控端）</li>
+  <li>每位玩家一支能上網的手機</li>
+</ul>
+<h3>帶領者步驟</h3>
+<ol>
+  <li>電腦打開遊戲首頁，按「主控端（大螢幕）」。</li>
+  <li>選角色和難度，按「套用設定、準備新遊戲」。</li>
+  <li>請大家用手機打開畫面上顯示的網址，輸入名字後按「加入」。右邊排行榜會出現名字，畫面上也看得到已加入幾個人。</li>
+  <li>人到齊了按「開始第 1 題」。</li>
+  <li>每一題：大螢幕出題，玩家在手機上點答案。所有人都答完，或時間到，就會自動公布；要早一點公布可以按「提早公布」（不計時的話按「公布答案」）。</li>
+  <li>公布後按「下一題」。第 10 題結束按「看最後結果」。</li>
+  <li>想換一批人玩，按右邊排行榜下方的「清空玩家重來」。</li>
+</ol>
+<div class="say">
+  <p>📣 開場介紹詞</p>
+  <p>「大家看大螢幕，上面這隻貓身上穿戴了一些東西，像帽子、圍巾、襪子。先數牠身上有幾件，再照旁邊綠色那張卡，加上或乘上那個數字。算好之後，在手機上找到有這個數字的那張卡，點下去。每題只能點一次，點錯這題就沒分。越快答對，分數越高。」</p>
+</div>
+<p class="tip">玩家重新整理或不小心關掉網頁，只要用同一支手機、同一個瀏覽器再打開，名字和分數都還在。換手機或用無痕模式開，會變成一個新玩家。</p>
+<p class="tip">主控端第一次打開時，會綁定那台電腦。之後要換別台電腦當主控端，得先到 Firebase 後台刪掉 rooms/crocoutfit-main/hostUid。</p>
+
+<h2 id="duel">模式二：平板雙人對戰</h2>
+<p>適合：兩個人一起玩，例如親子、兩個孩子、治療師和個案。不用連網。</p>
+<h3>步驟</h3>
+<ol>
+  <li>平板打開遊戲首頁，按「雙人對戰（平板）」。</li>
+  <li>選角色和難度，按「開始」。</li>
+  <li>平板平放在桌上，兩人面對面坐。畫面上下各一半，上半部是倒過來的，給對面的人看。如果兩人是並肩坐，按中間的「上方轉向」把上半部轉正。</li>
+  <li>上半部是綠隊，下半部是紫隊，各自在自己那半邊點答案。</li>
+</ol>
+<h3>規則</h3>
+<ul>
+  <li>先點到正確那張卡的人得 1 分，這題就結束。</li>
+  <li>點錯的人這題被鎖住，要等下一題。兩個人都點錯，就直接公布答案。</li>
+  <li>每題公布 3 秒後自動跳下一題。10 題後比總分。</li>
+</ul>
+<div class="say">
+  <p>📣 開場介紹詞</p>
+  <p>「你們一人顧一邊。看你自己那半邊的貓，數牠身上有幾件東西，再照綠色卡加或乘。算好在你這邊的數字卡裡點答案。誰先點對誰得一分。點錯的話，這題就不能再點，要等下一題喔。」</p>
+</div>
+
+<h2 id="group">模式三：團體模式（一台電腦投影）</h2>
+<p>適合：團體課、治療室、長者團體，只有一台電腦，大家不用拿手機。玩家用喊的或舉手回答，帶領者在電腦上幫大家點。不用連網。</p>
+<h3>步驟</h3>
+<ol>
+  <li>電腦接投影，打開遊戲首頁，按「團體模式（一台電腦投影）」。</li>
+  <li>選角色和難度。</li>
+  <li>選玩法：「全場合作」或「分 2／3／4 隊搶答」，按「開始新的一局」。</li>
+  <li>大家看螢幕數配件，說出答案。帶領者在螢幕上點大家說的那張卡。</li>
+  <li>點對了：那張卡會被框起來。全場合作會自動記一題；分隊的話，下方會問「哪一隊答的？」，按那一隊的按鈕加分，或按「不給分」。</li>
+  <li>點錯了：那張卡會抖一下、變淡，不扣分，可以繼續猜。大家都猜不出來，就按「公布答案」。有計時的話，時間到也會自動公布，不給分。</li>
+  <li>按「下一題」繼續。第 10 題公布後，按鈕會變成「看結果」。</li>
+</ol>
+<p class="tip">右上角的「重新設定」可以暫停遊戲。要是不小心按到，按「繼續這局」就會回到原本的題目和分數，倒數也會接著算。</p>
+<h3>全場合作</h3>
+<p>大家一起努力，看全場 10 題能答對幾題。沒有輸家，最適合長者團體，或剛開始玩的孩子。</p>
+<div class="say">
+  <p>📣 開場介紹詞（長者，只數配件）</p>
+  <p>「我們來數數看，這隻貓身上穿戴了幾樣東西。帽子算一樣，圍巾算一樣，一雙襪子也算一樣。數好了跟我說是幾，我們一起在下面的大數字裡把它找出來。猜錯沒關係，可以再猜。」</p>
+</div>
+<h3>分隊搶答</h3>
+<p>先分好隊（紅、藍、綠、黃），舉手搶答。帶領者請最先舉手的隊說答案，再幫他們點卡。</p>
+<div class="say">
+  <p>📣 開場介紹詞</p>
+  <p>「我們分成紅隊和藍隊。螢幕上的貓穿了幾件東西，算出答案的人先舉手，我請最快舉手的那隊說答案。答對的隊加一分，答錯沒關係，別隊可以接著搶。10 題之後看哪一隊分數最高。」</p>
+</div>
+<p class="tip">帶長者的時候：設成不計時、只數配件、大字 9 張。可以請他用手指一件一件點著數，數完再說出數字。</p>
+
+<h2 id="solo">一個人玩</h2>
+<p>用團體模式的「全場合作」，自己點卡就好，結束時會顯示「全場答對幾題」，可以當成跟自己比的練習。建議先設成不計時，熟了再開 30 秒或 10 秒。</p>
+
+<p class="noprint" style="margin-top:3em"><a class="btn" href="index.html">回遊戲首頁</a></p>
+
+<script src="game.js?v=4"></script>
+<script>
+document.getElementById('c1').innerHTML = charSVG(['beanie', 'scarf', 'mitten'], 'cat');
+document.getElementById('c2').innerHTML = charSVG([], 'cat');
+</script>
+</body>
+</html>
