@@ -55,7 +55,7 @@ signIn()
     room.child('state').on('value', (s) => { S = s.val() || { phase: 'lobby' }; watchAnswers(); render(); });
     room.child('players').on('value', (s) => { players = s.val() || {}; render(); });
     room.child('scores').on('value', (s) => { scores = s.val() || {}; render(); });
-    requestAnimationFrame(tick);
+    setInterval(tick, 250);   // 不用 rAF：分頁在背景時 rAF 會暫停，時間到也不會公布
   })
   .catch((e) => { $('err').textContent = '連線失敗：' + e.message; });
 
@@ -90,7 +90,9 @@ function finishRound() {
   if (S.phase !== 'answer' || S.scoredRound === S.round.n || finishing) return;
   finishing = true;
   const n = S.round.n, answer = answerOf(S.round, S.mode), card = findCard(S.board, answer);
-  room.child('answers/' + n).once('value').then((snap) => {
+  // 分數也重讀一次，避免主控端剛重整、本地 scores 還沒載入就覆蓋掉累計分
+  Promise.all([room.child('answers/' + n).once('value'), room.child('scores').once('value')]).then(([snap, sc]) => {
+    const scores = sc.val() || {};
     const pts = scoreAnswers(snap.val(), card);
     const upd = { 'state/phase': 'reveal', 'state/scoredRound': n, 'state/reveal': { answer, card, pts } };
     for (const [u, p] of Object.entries(pts)) {
@@ -110,7 +112,6 @@ function tick() {
     if (t) t.textContent = Math.max(0, Math.ceil(left / 1000));
     if (left < -GRACE_MS) finishRound();
   }
-  requestAnimationFrame(tick);
 }
 
 function nameOf(uid) { return escapeHtml(players[uid]?.name || '（已離開）'); }
